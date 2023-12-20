@@ -1,5 +1,5 @@
 # weirdle
-a weird version of wordle
+a weird (hard) version of wordle
 
 ## how to play
 In the command line like `python weirdle.py`. It plays like the regular wordle game where the result of your guess is shown per character, and is either:
