@@ -1,10 +1,13 @@
 import random
-
+from collections import namedtuple
+Answer = namedtuple('Answer', ['guess', 'gbo', 'word'])
+Result = namedtuple('Result', ['score', 'gbo'])
+WordToResult = namedtuple('WordToResult', ['word', 'result'])
 
 class Weirdle:
     words: list[str] = []
     initial_words: list[str] = []
-    answers: list[tuple[str, list[str], str]] = []
+    answers: list = []
     attempts_remaining: int
 
     def __init__(self):
@@ -19,25 +22,25 @@ class Weirdle:
         self.initial_words = self.words.copy()
         self.attempts_remaining = 6
 
-    def score(self, input, word):
+    def result(self, input, word):
         score = 0
-        answer = []
+        gbo = []
         for i in range(0, 5):
             if input[i] == word[i]:
                 score += 100
-                answer.append("Green")
+                gbo.append("Green")
                 # don't allow any further matches on this character
                 word = word[:i] + "-" + word[i + 1 :]
             elif input[i] in word:
                 score += 50
-                answer.append("Orange")
+                gbo.append("Orange")
                 # don't allow any further matches on this character
                 pos = word.find(input[i])
                 word = word[:pos] + "-" + word[pos + 1 :]
             else:
                 score += random.randint(1, 100) / 10
-                answer.append("Black")
-        return score, answer
+                gbo.append("Black")
+        return Result(score, gbo)
 
     def guess(self, input: str):
 
@@ -49,20 +52,20 @@ class Weirdle:
             self.attempts_remaining -= 1
 
         # give each word left in words a score, based on how it matches with input
-        scored = [(word, self.score(input, word)) for word in self.words]
+        scored = [WordToResult(word=word, result=self.result(input, word)) for word in self.words]
 
-        def get_score(elem):
-            return elem[1][0]
+        def get_score(elem: WordToResult):
+            return elem.result.score
 
         # use a low ranked one of these to produce the answer we'll give the player
-        answer = sorted(scored, key=get_score)[int(len(scored) / 10)]
-        print((input, answer[1][1]))
+        candidate = sorted(scored, key=get_score)[int(len(scored) / 10)]
+        print((input, candidate.result.gbo))
 
-        if set(answer[1][1]) == {"Green"}:
+        if set(candidate.result.gbo) == {"Green"}:
             print("Hooray!")
             exit()
 
-        self.answers.append((input, answer[1][1], answer[0]))
+        self.answers.append(Answer(input, candidate.result.gbo, candidate.word))
 
         # now filter the available candidates
         new_words = []
@@ -72,23 +75,23 @@ class Weirdle:
             could_be = True
 
             # ensure we keep at least the word behind the last score
-            if word == last_answer[2]:
+            if word == last_answer.word:
                 new_words.append(word)
                 continue
 
             reason = ""
             for i in range(0, 5):
-                if last_answer[1][i] == "Black" and last_answer[0][i] in word:
+                if last_answer.gbo[i] == "Black" and last_answer.guess[i] in word:
                     could_be = False
                     reason = "B"
                     break
-                elif last_answer[1][i] == "Orange" and (
-                    last_answer[0][i] not in word or last_answer[0][i] == word[i]
+                elif last_answer.gbo[i] == "Orange" and (
+                    last_answer.guess[i] not in word or last_answer.guess[i] == word[i]
                 ):
                     could_be = False
                     reason = "O"
                     break
-                elif last_answer[1][i] == "Green" and last_answer[0][i] != word[i]:
+                elif last_answer.gbo[i] == "Green" and last_answer.guess[i] != word[i]:
                     could_be = False
                     reason = "G"
                     break
@@ -107,4 +110,4 @@ while True:
         guess = input("Enter guess:")
         weirdle.guess(guess)
 
-    print("Sorry, you're too rubbish. The word was %s.\n" % weirdle.answers[-1][2])
+    print("Sorry, you're too rubbish. The word was %s.\n" % weirdle.answers[-1].word)
