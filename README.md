@@ -1,4 +1,4 @@
-# weirdle
+# weirdle-python
 a weird (hard) version of wordle
 
 ## how to play
